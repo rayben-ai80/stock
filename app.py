@@ -67,16 +67,17 @@ def get_stage_and_recommendation(data):
     스탠 와인스타인의 방법에 따라 주식의 현재 단계를 결정합니다.
     """
     if data is None or len(data) < 151:
-        return "데이터 부족", "N/A"
+        return "데이터 부족", "N/A", None, None
 
     # .values[-1]을 사용하여 Series의 마지막 값을 스칼라로 명확하게 가져옵니다.
     price = data['Close'].values[-1]
     sma50 = data['SMA50'].values[-1]
     sma150 = data['SMA150'].values[-1]
+    latest_date = data.index[-1]
 
     # 롤링 평균으로 인한 NaN 값을 처리합니다.
     if pd.isna(price) or pd.isna(sma50) or pd.isna(sma150):
-        return "분석을 위한 데이터 부족", "N/A"
+        return "분석을 위한 데이터 부족", "N/A", None, None
 
     # 150일 이동평균의 기울기 계산
     if len(data) < 150 + 22:
@@ -94,16 +95,16 @@ def get_stage_and_recommendation(data):
     is_flat_zone = abs((price - sma150) / sma150) < 0.1 and abs(sma150_slope) < 0.02 if sma150 > 0 else False
 
     if is_stage_2:
-        return "2단계: 상승 국면", "매수 / 보유"
+        return "2단계: 상승 국면", "매수 / 보유", price, latest_date
     elif is_stage_4:
-        return "4단계: 하락 국면", "매도 / 회피"
+        return "4단계: 하락 국면", "매도 / 회피", price, latest_date
     elif is_flat_zone:
         if price > sma150:
-            return "3단계: 정점 영역", "주의 / 비중 축소"
+            return "3단계: 정점 영역", "주의 / 비중 축소", price, latest_date
         else:
-            return "1단계: 기반 다지기", "중립 / 관망"
+            return "1단계: 기반 다지기", "중립 / 관망", price, latest_date
     else:
-        return "단계를 알 수 없음", "중립 / 관망"
+        return "단계를 알 수 없음", "중립 / 관망", price, latest_date
 
 # --- 메인 앱 ---
 st.title("스탠 와인스타인 단계 분석 대시보드")
@@ -124,9 +125,14 @@ if analyze_button:
 
         if data is not None:
             st.success("데이터를 성공적으로 불러왔습니다!")
-            stage, recommendation = get_stage_and_recommendation(data)
+            stage, recommendation, last_price, last_date = get_stage_and_recommendation(data)
 
             st.subheader(f"현재 분석: {stage}")
+
+            if last_price is not None and last_date is not None:
+                col1, col2 = st.columns(2)
+                col1.metric("최신 종가", f"{last_price:,.0f} KRW")
+                col2.metric("데이터 기준일", last_date.strftime('%Y-%m-%d'))
 
             if "매수" in recommendation:
                 st.success(f"추천: {recommendation}")
@@ -134,6 +140,8 @@ if analyze_button:
                 st.warning(f"추천: {recommendation}")
             else:
                 st.info(f"추천: {recommendation}")
+
+            st.info("참고: 본 분석은 Stan Weinstein의 이론에 기반한 기술적 분석이며, 투자 추천이 아닙니다. 데이터는 지연될 수 있습니다.")
 
             # --- 데이터 시각화 ---
             fig = go.Figure()
