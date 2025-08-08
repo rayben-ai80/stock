@@ -69,10 +69,10 @@ def get_stage_and_recommendation(data):
     if data is None or len(data) < 151:
         return "데이터 부족", "N/A"
 
-    # .iloc[-1]을 사용하여 마지막 행의 값을 스칼라로 가져옵니다.
-    price = data['Close'].iloc[-1]
-    sma50 = data['SMA50'].iloc[-1]
-    sma150 = data['SMA150'].iloc[-1]
+    # .values[-1]을 사용하여 Series의 마지막 값을 스칼라로 명확하게 가져옵니다.
+    price = data['Close'].values[-1]
+    sma50 = data['SMA50'].values[-1]
+    sma150 = data['SMA150'].values[-1]
 
     # 롤링 평균으로 인한 NaN 값을 처리합니다.
     if pd.isna(price) or pd.isna(sma50) or pd.isna(sma150):
